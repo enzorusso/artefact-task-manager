@@ -44,8 +44,8 @@ textarea {
 
 .page-container {
   width: min(100% - 2rem, 48rem);
-  min-height: 100vh;
-  margin-inline: auto;
+  min-height: calc(100vh - 2rem);
+  margin: 1rem auto;
   padding-block: clamp(1.5rem, 7vh, 4.5rem);
 }
 
@@ -309,6 +309,8 @@ textarea {
 @media (max-width: 30rem) {
   .page-container {
     width: min(100% - 1rem, 48rem);
+    min-height: calc(100vh - 1rem);
+    margin-block: 0.5rem;
     padding-block: 0.5rem;
   }
 
