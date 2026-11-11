@@ -83,3 +83,6 @@ Both commands run `scripts/tasks.mjs` and target `http://127.0.0.1:3000` by defa
 TASKS_BASE_URL=http://127.0.0.1:3001 npm run tasks:seed
 TASKS_BASE_URL=http://127.0.0.1:3001 npm run tasks:clear
 ```
+
+> [!IMPORTANT]
+> Running either script does not automatically refresh an already open task list. The list fetches data when the page loads and when the user scrolls to load another page. Automatically reflecting external seed or clear operations would require periodic polling or a push channel between the script/server and browser. Polling every few seconds is straightforward, but it repeatedly sends requests even when the data has not changed. For this small application, that ongoing server and network cost is unnecessary, so reload the page after running a script to see its changes.
