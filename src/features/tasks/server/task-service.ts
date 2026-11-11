@@ -1,18 +1,12 @@
 import 'server-only';
 
 import { randomUUID } from 'node:crypto';
-import type { TaskInput } from '@/features/tasks/schemas/task.schema';
-import type { Task } from '@/features/tasks/types/task.types';
-import type { z } from 'zod';
-import type { taskPageSchema } from '@/features/tasks/schemas/task.schema';
-import { taskRepository } from '@/server/repositories/task.repository';
+import type { Task, TaskInput, TaskPageInput } from '../task.schema';
+import { taskRepository } from './task-repository';
 
 export const taskService = {
-  listPage(input: z.infer<typeof taskPageSchema>) {
+  list(input: TaskPageInput) {
     return taskRepository.findPage(input.cursor, input.limit);
-  },
-  get(id: string) {
-    return taskRepository.findById(id);
   },
   create(input: TaskInput): Task {
     return taskRepository.save({ ...input, id: randomUUID(), dataCriacao: new Date().toISOString() });

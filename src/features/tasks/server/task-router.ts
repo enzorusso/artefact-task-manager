@@ -1,16 +1,11 @@
 import 'server-only';
 
-import { taskIdSchema, taskInputSchema, taskPageSchema, updateTaskSchema } from '@/features/tasks/schemas/task.schema';
-import { taskService } from '@/server/services/task.service';
-import { publicProcedure, router, TRPCError } from '../trpc';
+import { taskIdSchema, taskInputSchema, taskPageSchema, updateTaskSchema } from '../task.schema';
+import { taskService } from './task-service';
+import { publicProcedure, router, TRPCError } from '@/server/api/trpc';
 
 export const taskRouter = router({
-  list: publicProcedure.input(taskPageSchema).query(({ input }) => taskService.listPage(input)),
-  byId: publicProcedure.input(taskIdSchema).query(({ input }) => {
-    const task = taskService.get(input.id);
-    if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Tarefa não encontrada.' });
-    return task;
-  }),
+  list: publicProcedure.input(taskPageSchema).query(({ input }) => taskService.list(input)),
   create: publicProcedure.input(taskInputSchema).mutation(({ input }) => taskService.create(input)),
   update: publicProcedure.input(updateTaskSchema).mutation(({ input }) => {
     const { id, ...data } = input;

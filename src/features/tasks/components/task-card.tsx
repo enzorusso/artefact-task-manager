@@ -1,31 +1,70 @@
 'use client';
 
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FaRegTrashCan } from 'react-icons/fa6';
 import { LuPencil } from 'react-icons/lu';
-import type { TaskInput } from '@/features/tasks/schemas/task.schema';
-import { taskInputSchema } from '@/features/tasks/schemas/task.schema';
-import type { Task } from '@/features/tasks/types/task.types';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
+import { useTRPC } from '@/trpc/client';
+import { taskInputSchema, type Task, type TaskInput } from '../task.schema';
+import {
+  removeTaskFromPages,
+  TASKS_PAGE_SIZE,
+  type TaskListData,
+  updateTaskInPages,
+} from '../task-cache';
 
-export function TaskItem({
-  task,
-  onDelete,
-  onSave,
-  isDeleting,
-  isSaving,
-}: {
-  task: Task;
-  onDelete: (id: string) => void;
-  onSave: (id: string, input: TaskInput) => Promise<boolean>;
-  isDeleting: boolean;
-  isSaving: boolean;
-}) {
+export function TaskCard({ task }: { task: Task }) {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const listQueryKey = trpc.tasks.list.infiniteQueryKey({ limit: TASKS_PAGE_SIZE });
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(task.titulo);
   const [description, setDescription] = useState(task.descricao ?? '');
+
+  const updateTask = useMutation(
+    trpc.tasks.update.mutationOptions({
+      onMutate: async ({ id, ...input }) => {
+        await queryClient.cancelQueries({ queryKey: listQueryKey });
+        const previous = queryClient.getQueriesData<TaskListData>({ queryKey: listQueryKey });
+        queryClient.setQueriesData<TaskListData>({ queryKey: listQueryKey }, (data) =>
+          updateTaskInPages(data, id, input),
+        );
+        return { previous };
+      },
+      onSuccess: () => toast.success('Tarefa atualizada.', { duration: 2500 }),
+      onError: (error, _input, context) => {
+        context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
+        toast.error(error.message);
+      },
+      onSettled: () => {
+        void queryClient.invalidateQueries({ queryKey: listQueryKey });
+      },
+    }),
+  );
+
+  const deleteTask = useMutation(
+    trpc.tasks.delete.mutationOptions({
+      onMutate: async ({ id }) => {
+        await queryClient.cancelQueries({ queryKey: listQueryKey });
+        const previous = queryClient.getQueriesData<TaskListData>({ queryKey: listQueryKey });
+        queryClient.setQueriesData<TaskListData>({ queryKey: listQueryKey }, (data) =>
+          removeTaskFromPages(data, id),
+        );
+        return { previous };
+      },
+      onSuccess: () => toast.success('Tarefa removida.', { duration: 2500 }),
+      onError: (error, _input, context) => {
+        context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
+        toast.error(error.message);
+      },
+      onSettled: () => {
+        void queryClient.invalidateQueries({ queryKey: listQueryKey });
+      },
+    }),
+  );
 
   function startEditing() {
     setTitle(task.titulo);
@@ -39,12 +78,21 @@ export function TaskItem({
     setIsEditing(false);
   }
 
+  async function saveTask(input: TaskInput) {
+    try {
+      await updateTask.mutateAsync({ id: task.id, ...input });
+      setIsEditing(false);
+    } catch {
+      // The mutation reports the error through a toast and rolls back its optimistic update.
+    }
+  }
+
   return (
     <li className={`task-item${isEditing ? ' task-item--editing' : ''}`}>
       {isEditing ? (
         <form
           className="task-edit-form"
-          onSubmit={async (event) => {
+          onSubmit={(event) => {
             event.preventDefault();
             const result = taskInputSchema.safeParse({
               titulo: title,
@@ -54,7 +102,7 @@ export function TaskItem({
               toast.error(result.error.issues[0]?.message ?? 'Confira os dados da tarefa.');
               return;
             }
-            if (await onSave(task.id, result.data)) setIsEditing(false);
+            void saveTask(result.data);
           }}
         >
           <div className="task-composer">
@@ -78,15 +126,18 @@ export function TaskItem({
           <div className="task-edit-actions">
             <Button
               className="cancel-edit-button"
-              disabled={isSaving}
+              disabled={updateTask.isPending}
               onClick={cancelEditing}
               type="button"
-              variant="ghost"
             >
               Cancelar
             </Button>
-            <Button className="add-task-button" disabled={!title.trim() || isSaving} type="submit">
-              {isSaving ? 'Salvando…' : 'Salvar'}
+            <Button
+              className="add-task-button"
+              disabled={!title.trim() || updateTask.isPending}
+              type="submit"
+            >
+              {updateTask.isPending ? 'Salvando…' : 'Salvar'}
             </Button>
           </div>
         </form>
@@ -112,8 +163,8 @@ export function TaskItem({
               className="icon-button"
               type="button"
               aria-label={`Excluir: ${task.titulo}`}
-              disabled={isDeleting}
-              onClick={() => onDelete(task.id)}
+              disabled={deleteTask.isPending}
+              onClick={() => deleteTask.mutate({ id: task.id })}
             >
               <FaRegTrashCan aria-hidden="true" />
             </button>

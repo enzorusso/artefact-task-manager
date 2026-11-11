@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { taskStore } from '@/server/data/task.store';
-import type { Task } from '@/features/tasks/types/task.types';
+import type { Task } from '../task.schema';
+import { taskStore } from './task-store';
 
 export const taskRepository = {
   findPage(cursor: string | null | undefined, limit: number) {

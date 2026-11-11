@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { Task } from '@/features/tasks/types/task.types';
+import type { Task } from '../task.schema';
 
 const tasks = new Map<string, Task>();
 
@@ -10,14 +10,14 @@ export const taskStore = {
       (a, b) => b.dataCriacao.localeCompare(a.dataCriacao) || b.id.localeCompare(a.id),
     );
   },
-  get(id: string): Task | undefined {
+  get(id: string) {
     return tasks.get(id);
   },
-  set(task: Task): Task {
+  set(task: Task) {
     tasks.set(task.id, task);
     return task;
   },
-  delete(id: string): boolean {
+  delete(id: string) {
     return tasks.delete(id);
   },
 };
