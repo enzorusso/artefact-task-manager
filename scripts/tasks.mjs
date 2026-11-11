@@ -6,7 +6,7 @@ const pageSize = 50;
 const seedCount = 65;
 
 if (!['seed', 'clear'].includes(action)) {
-  console.error('Use: npm run tasks:seed ou npm run tasks:clear');
+  console.error('Use: npm run tasks:seed or npm run tasks:clear');
   process.exit(1);
 }
 
@@ -21,12 +21,12 @@ async function seedTasks() {
       Array.from({ length: end - start + 1 }, (_, index) => {
         const number = start + index;
         return client.tasks.create.mutate({
-          titulo: 'Tarefa de teste ' + String(number).padStart(2, '0'),
-          descricao: 'Item ' + number + ' para testar a rolagem infinita.',
+          titulo: 'Test task ' + String(number).padStart(2, '0'),
+          descricao: 'Item ' + number + ' for testing infinite scroll.',
         });
       }),
     );
-    console.log('Criadas ' + end + '/' + seedCount + ' tarefas.');
+    console.log('Created ' + end + '/' + seedCount + ' tasks.');
   }
 }
 
@@ -39,17 +39,17 @@ async function clearTasks() {
 
     await Promise.all(page.items.map(({ id }) => client.tasks.delete.mutate({ id })));
     removed += page.items.length;
-    console.log('Removidas ' + removed + ' tarefas.');
+    console.log('Deleted ' + removed + ' tasks.');
   }
 }
 
 try {
   if (action === 'seed') await seedTasks();
   if (action === 'clear') await clearTasks();
-  console.log(action === 'seed' ? 'Seed concluído.' : 'Lista limpa.');
+  console.log(action === 'seed' ? 'Seeding complete.' : 'Task list cleared.');
 } catch (error) {
-  console.error('Não foi possível executar "' + action + '" em ' + baseUrl + '.');
-  console.error('Confira se o servidor Next.js está rodando e se a URL está correta.');
+  console.error('Could not run "' + action + '" against ' + baseUrl + '.');
+  console.error('Check that the Next.js server is running and the URL is correct.');
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 }

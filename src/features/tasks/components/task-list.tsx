@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useTRPC } from '@/trpc/client';
 import type { TaskPage } from '../task-cache';
 import { TASKS_PAGE_SIZE } from '../task-cache';
+import { taskMessages } from '../task-messages';
 import { TaskCard } from './task-card';
 
 export function TaskList({ initialPage }: { initialPage: TaskPage }) {
@@ -39,24 +40,24 @@ export function TaskList({ initialPage }: { initialPage: TaskPage }) {
 
   useEffect(() => {
     if (tasksQuery.isError) {
-      toast.error(`Não foi possível carregar as tarefas: ${tasksQuery.error.message}`);
+      toast.error(taskMessages.list.loadError(tasksQuery.error.message));
     }
   }, [tasksQuery.error, tasksQuery.isError]);
 
   const tasks = tasksQuery.data.pages.flatMap((page) => page.items);
 
   return (
-    <section className="task-results" aria-label="Lista de tarefas">
+    <section className="task-results" aria-label={taskMessages.list.label}>
       <ul className="task-items">
         {tasks.length === 0 && !tasksQuery.isError && (
-          <li className="task-empty">Suas tarefas aparecerão aqui.</li>
+          <li className="task-empty">{taskMessages.list.empty}</li>
         )}
         {tasks.map((task) => (
           <TaskCard key={task.id} task={task} />
         ))}
       </ul>
       <div ref={sentinelRef} aria-hidden="true" />
-      {tasksQuery.isFetchingNextPage && <p role="status">Carregando mais tarefas…</p>}
+      {tasksQuery.isFetchingNextPage && <p role="status">{taskMessages.list.loadingMore}</p>}
     </section>
   );
 }

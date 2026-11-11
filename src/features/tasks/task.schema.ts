@@ -1,8 +1,17 @@
 import { z } from 'zod';
+import { taskMessages } from './task-messages';
 
 export const taskInputSchema = z.object({
-  titulo: z.string().trim().min(1, 'Informe um título.').max(120, 'Use até 120 caracteres.'),
-  descricao: z.string().trim().max(2000, 'Use até 2.000 caracteres.').optional(),
+  titulo: z
+    .string()
+    .trim()
+    .min(1, taskMessages.validation.titleRequired)
+    .max(120, taskMessages.validation.titleMaxLength),
+  descricao: z
+    .string()
+    .trim()
+    .max(2000, taskMessages.validation.descriptionMaxLength)
+    .optional(),
 });
 
 export const taskSchema = taskInputSchema.extend({

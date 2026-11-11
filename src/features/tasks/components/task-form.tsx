@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTRPC } from '@/trpc/client';
 import { taskInputSchema, type Task } from '../task.schema';
+import { taskMessages } from '../task-messages';
 import {
   addTaskToFirstPage,
   replaceTaskInPages,
@@ -43,7 +44,7 @@ export function TaskForm() {
         );
         setTitle('');
         setDescription('');
-        toast.success('Tarefa adicionada.', { duration: 2500 });
+        toast.success(taskMessages.form.added, { duration: 2500 });
       },
       onError: (error, _input, context) => {
         context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
@@ -65,7 +66,7 @@ export function TaskForm() {
           descricao: description || undefined,
         });
         if (!result.success) {
-          toast.error(result.error.issues[0]?.message ?? 'Confira os dados da tarefa.');
+          toast.error(result.error.issues[0]?.message ?? taskMessages.validation.invalidTask);
           return;
         }
         createTask.mutate(result.data);
@@ -73,18 +74,18 @@ export function TaskForm() {
     >
       <div className="task-composer">
         <Input
-          aria-label="Título da tarefa"
+          aria-label={taskMessages.form.titleLabel}
           className="task-title-input"
           onChange={(event) => setTitle(event.currentTarget.value)}
-          placeholder="Digite o título"
+          placeholder={taskMessages.form.titlePlaceholder}
           required
           value={title}
         />
         <textarea
-          aria-label="Descrição da tarefa (opcional)"
+          aria-label={taskMessages.form.descriptionLabel}
           className="task-description-input"
           onChange={(event) => setDescription(event.target.value)}
-          placeholder="Descrição (opcional)"
+          placeholder={taskMessages.form.descriptionPlaceholder}
           rows={3}
           value={description}
         />
@@ -95,10 +96,10 @@ export function TaskForm() {
         type="submit"
       >
         {createTask.isPending ? (
-          'Adicionando…'
+          taskMessages.form.adding
         ) : (
           <>
-            Adicionar
+            {taskMessages.form.add}
             <FiPlus aria-hidden="true" />
           </>
         )}

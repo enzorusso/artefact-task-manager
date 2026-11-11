@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTRPC } from '@/trpc/client';
 import { taskInputSchema, type Task, type TaskInput } from '../task.schema';
+import { taskMessages } from '../task-messages';
 import {
   removeTaskFromPages,
   TASKS_PAGE_SIZE,
@@ -34,7 +35,7 @@ export function TaskCard({ task }: { task: Task }) {
         );
         return { previous };
       },
-      onSuccess: () => toast.success('Tarefa atualizada.', { duration: 2500 }),
+      onSuccess: () => toast.success(taskMessages.card.updated, { duration: 2500 }),
       onError: (error, _input, context) => {
         context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
         toast.error(error.message);
@@ -55,7 +56,7 @@ export function TaskCard({ task }: { task: Task }) {
         );
         return { previous };
       },
-      onSuccess: () => toast.success('Tarefa removida.', { duration: 2500 }),
+      onSuccess: () => toast.success(taskMessages.card.deleted, { duration: 2500 }),
       onError: (error, _input, context) => {
         context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
         toast.error(error.message);
@@ -99,7 +100,7 @@ export function TaskCard({ task }: { task: Task }) {
               descricao: description || undefined,
             });
             if (!result.success) {
-              toast.error(result.error.issues[0]?.message ?? 'Confira os dados da tarefa.');
+              toast.error(result.error.issues[0]?.message ?? taskMessages.validation.invalidTask);
               return;
             }
             void saveTask(result.data);
@@ -107,18 +108,18 @@ export function TaskCard({ task }: { task: Task }) {
         >
           <div className="task-composer">
             <Input
-              aria-label="Título da tarefa"
+              aria-label={taskMessages.form.titleLabel}
               className="task-title-input"
               onChange={(event) => setTitle(event.currentTarget.value)}
-              placeholder="Digite o título"
+              placeholder={taskMessages.form.titlePlaceholder}
               required
               value={title}
             />
             <textarea
-              aria-label="Descrição da tarefa (opcional)"
+              aria-label={taskMessages.form.descriptionLabel}
               className="task-description-input"
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Descrição (opcional)"
+              placeholder={taskMessages.form.descriptionPlaceholder}
               rows={3}
               value={description}
             />
@@ -130,14 +131,14 @@ export function TaskCard({ task }: { task: Task }) {
               onClick={cancelEditing}
               type="button"
             >
-              Cancelar
+              {taskMessages.card.cancel}
             </Button>
             <Button
               className="add-task-button"
               disabled={!title.trim() || updateTask.isPending}
               type="submit"
             >
-              {updateTask.isPending ? 'Salvando…' : 'Salvar'}
+              {updateTask.isPending ? taskMessages.card.saving : taskMessages.card.save}
             </Button>
           </div>
         </form>
@@ -147,14 +148,14 @@ export function TaskCard({ task }: { task: Task }) {
             <h2>{task.titulo}</h2>
             {task.descricao && <p>{task.descricao}</p>}
             <time dateTime={task.dataCriacao}>
-              Criada em {task.dataCriacao.slice(0, 10).split('-').reverse().join('/')}
+              {taskMessages.card.createdOn} {task.dataCriacao.slice(0, 10).split('-').reverse().join('/')}
             </time>
           </div>
           <div className="task-item__actions">
             <button
               className="icon-button icon-button--edit"
               type="button"
-              aria-label={`Editar: ${task.titulo}`}
+              aria-label={taskMessages.card.editLabel(task.titulo)}
               onClick={startEditing}
             >
               <LuPencil aria-hidden="true" />
@@ -162,7 +163,7 @@ export function TaskCard({ task }: { task: Task }) {
             <button
               className="icon-button icon-button--delete"
               type="button"
-              aria-label={`Excluir: ${task.titulo}`}
+              aria-label={taskMessages.card.deleteLabel(task.titulo)}
               disabled={deleteTask.isPending}
               onClick={() => deleteTask.mutate({ id: task.id })}
             >
