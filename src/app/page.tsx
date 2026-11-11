@@ -9,6 +9,7 @@ export default async function HomePage() {
 
   return (
     <Container>
+      <h1>TaskManager</h1>
       <TaskList initialPage={initialPage} />
     </Container>
   );

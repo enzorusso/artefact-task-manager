@@ -8,10 +8,12 @@ import {
   type InfiniteData,
 } from '@tanstack/react-query';
 import { taskInputSchema } from '@/features/tasks/schemas/task.schema';
+import type { TaskInput } from '@/features/tasks/schemas/task.schema';
 import type { Task } from '@/features/tasks/types/task.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FiPlus } from 'react-icons/fi';
+import { toast } from 'sonner';
 import { useTRPC } from '@/trpc/client';
 import { TaskItem } from './task-items';
 
@@ -19,7 +21,6 @@ const PAGE_SIZE = 20;
 
 type TaskPage = { items: Task[]; nextCursor: string | null };
 type TaskListData = InfiniteData<TaskPage, string | null>;
-type Feedback = { message: string; type: 'success' | 'error' };
 
 function addToFirstPage(data: TaskListData | undefined, task: Task): TaskListData | undefined {
   if (!data) return data;
@@ -60,22 +61,6 @@ export function TaskList({ initialPage }: { initialPage: TaskPage }) {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function showFeedback(message: string, type: Feedback['type'] = 'success') {
-    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
-    setFeedback({ message, type });
-    feedbackTimer.current =
-      type === 'success' ? setTimeout(() => setFeedback(null), 2500) : null;
-  }
-
-  useEffect(
-    () => () => {
-      if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
-    },
-    [],
-  );
 
   const tasksQuery = useInfiniteQuery(
     trpc.tasks.list.infiniteQueryOptions(
@@ -112,11 +97,11 @@ export function TaskList({ initialPage }: { initialPage: TaskPage }) {
         );
         setTitle('');
         setDescription('');
-        showFeedback('Tarefa adicionada.');
+        toast.success('Tarefa adicionada.', { duration: 2500 });
       },
       onError: (error, _input, context) => {
         context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
-        showFeedback(error.message, 'error');
+        toast.error(error.message);
       },
       onSettled: () => {
         void queryClient.invalidateQueries({ queryKey: listQueryKey });
@@ -133,10 +118,44 @@ export function TaskList({ initialPage }: { initialPage: TaskPage }) {
         queryClient.setQueriesData<TaskListData>({ queryKey }, (data) => removeFromPages(data, id));
         return { previous };
       },
-      onSuccess: () => showFeedback('Tarefa removida.'),
+      onSuccess: () => toast.success('Tarefa removida.', { duration: 2500 }),
       onError: (error, _input, context) => {
         context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
-        showFeedback(error.message, 'error');
+        toast.error(error.message);
+      },
+      onSettled: () => {
+        void queryClient.invalidateQueries({ queryKey: listQueryKey });
+      },
+    }),
+  );
+
+  const updateTask = useMutation(
+    trpc.tasks.update.mutationOptions({
+      onMutate: async (input) => {
+        const queryKey = listQueryKey;
+        await queryClient.cancelQueries({ queryKey });
+        const previous = queryClient.getQueriesData<TaskListData>({ queryKey });
+        const currentTask = previous
+          .flatMap(([, data]) => data?.pages.flatMap((page) => page.items) ?? [])
+          .find((task) => task.id === input.id);
+
+        if (currentTask) {
+          const optimisticTask: Task = {
+            ...currentTask,
+            titulo: input.titulo,
+            descricao: input.descricao,
+          };
+          queryClient.setQueriesData<TaskListData>({ queryKey }, (data) =>
+            replaceTask(data, input.id, optimisticTask),
+          );
+        }
+
+        return { previous };
+      },
+      onSuccess: () => toast.success('Tarefa atualizada.', { duration: 2500 }),
+      onError: (error, _input, context) => {
+        context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
+        toast.error(error.message);
       },
       onSettled: () => {
         void queryClient.invalidateQueries({ queryKey: listQueryKey });
@@ -161,6 +180,12 @@ export function TaskList({ initialPage }: { initialPage: TaskPage }) {
     return () => observer.disconnect();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
+  useEffect(() => {
+    if (tasksQuery.isError) {
+      toast.error(`Não foi possível carregar as tarefas: ${tasksQuery.error.message}`);
+    }
+  }, [tasksQuery.error, tasksQuery.isError]);
+
   const tasks = tasksQuery.data.pages.flatMap((page) => page.items);
 
   return (
@@ -174,10 +199,9 @@ export function TaskList({ initialPage }: { initialPage: TaskPage }) {
             descricao: description || undefined,
           });
           if (!result.success) {
-            showFeedback(result.error.issues[0]?.message ?? 'Confira os dados da tarefa.', 'error');
+            toast.error(result.error.issues[0]?.message ?? 'Confira os dados da tarefa.');
             return;
           }
-          setFeedback(null);
           createTask.mutate(result.data);
         }}
       >
@@ -215,16 +239,6 @@ export function TaskList({ initialPage }: { initialPage: TaskPage }) {
         </Button>
       </form>
 
-      {feedback && (
-        <p
-          className={`form-feedback form-feedback--${feedback.type}`}
-          role={feedback.type === 'error' ? 'alert' : 'status'}
-        >
-          {feedback.message}
-        </p>
-      )}
-      {tasksQuery.isError && <p role="alert">Não foi possível carregar as tarefas: {tasksQuery.error.message}</p>}
-
       <ul className="task-items">
         {tasks.length === 0 && !tasksQuery.isError && (
           <li className="task-empty">Suas tarefas aparecerão aqui.</li>
@@ -234,7 +248,16 @@ export function TaskList({ initialPage }: { initialPage: TaskPage }) {
             key={task.id}
             task={task}
             onDelete={(id) => deleteTask.mutate({ id })}
+            onSave={async (id, input: TaskInput) => {
+              try {
+                await updateTask.mutateAsync({ id, ...input });
+                return true;
+              } catch {
+                return false;
+              }
+            }}
             isDeleting={deleteTask.isPending}
+            isSaving={updateTask.isPending && updateTask.variables?.id === task.id}
           />
         ))}
       </ul>
