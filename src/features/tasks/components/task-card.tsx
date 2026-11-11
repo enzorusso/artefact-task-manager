@@ -152,7 +152,7 @@ export function TaskCard({ task }: { task: Task }) {
           </div>
           <div className="task-item__actions">
             <button
-              className="icon-button"
+              className="icon-button icon-button--edit"
               type="button"
               aria-label={`Editar: ${task.titulo}`}
               onClick={startEditing}
@@ -160,7 +160,7 @@ export function TaskCard({ task }: { task: Task }) {
               <LuPencil aria-hidden="true" />
             </button>
             <button
-              className="icon-button"
+              className="icon-button icon-button--delete"
               type="button"
               aria-label={`Excluir: ${task.titulo}`}
               disabled={deleteTask.isPending}

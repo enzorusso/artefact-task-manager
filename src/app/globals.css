@@ -256,13 +256,14 @@ textarea {
   height: 1.05rem;
 }
 
-.icon-button:hover {
-  border-color: var(--line);
-  background: var(--accent-soft);
-  color: var(--accent);
+.icon-button--edit:hover {
+  border-color: #d4e1f0;
+  background: #edf4fb;
+  color: #4d7198;
 }
 
-.task-item__actions button:hover {
+.icon-button--delete:hover {
+  border-color: #f0d8d5;
   background: #fbefed;
   color: var(--danger);
 }
