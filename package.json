@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "tasks:seed": "node scripts/tasks.mjs seed",
+    "tasks:clear": "node scripts/tasks.mjs clear",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
